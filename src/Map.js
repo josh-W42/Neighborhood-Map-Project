@@ -1,13 +1,14 @@
 import React, { Component } from 'react';
-import {Map, InfoWindow, Marker, GoogleApiWrapper} from 'google-maps-react';
+import {Map, InfoWindow, Marker} from 'google-maps-react';
 
-export class MapContainer extends Component {
+class MapContainer extends Component {
 
-
-  onMarkerClick () {
+  onMarkerClick() {
+    console.log(this);
   }
 
   render() {
+
     return (
       <Map
         google={this.props.google}
@@ -18,9 +19,15 @@ export class MapContainer extends Component {
           }}
         >
 
-        <Marker onClick={console.log(this.onMarkerClick)}
+        <Marker onClick={this.onMarkerClick}
                 animation={this.props.google.maps.Animation.DROP}
-                name={'Current location'} />
+                position={{
+                    lat: 34.063793,
+                    lng: -118.445796
+                  }}
+                name={'Current location'}
+
+                />
 
         <InfoWindow onClose={this.onInfoWindowClose}>
             <div>
@@ -32,7 +39,4 @@ export class MapContainer extends Component {
   }
 }
 
-export default GoogleApiWrapper({
-  apiKey: 'AIzaSyDXbgkEoSEdXPyG7GDmuf7Mb1wW8RZ1Ek4'
-  // libraries: ['places', 'geometry']
-})(MapContainer)
+export default MapContainer
