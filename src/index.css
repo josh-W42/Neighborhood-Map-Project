@@ -20,13 +20,47 @@ code {
   border: 2px solid double black white;
 }
 
-#sideUI {
-  height: 80%;
-  width: 20%;
-  top: 10%;
-  left: 1%;
-  position: absolute;
-  z-index: 1;
-  background: white;
-  box-shadow: 1px 1px 15px grey;
+/*
+  Side User Interface CSS
+ */
+
+ #sideUI {
+   position: absolute;
+   height: 100%;
+   width: 20%;
+   background: white;
+   box-shadow: 1px 1px 15px grey;
+   z-index: 1;
+ }
+
+.mainUISection {
+  display: inline;
+}
+
+.hamburgerSection {
+  width: 2%;
+  display: inline-flex;
+}
+
+.resultsContainer {
+  display: block;
+  margin: auto;
+  height: 60%;
+  width: 100%;
+  overflow: auto;
+}
+
+.result {
+  display: inline-flex;
+  width: 98%;
+}
+
+.businessImage {
+  max-width: 100%;
+}
+
+.businessName {
+  text-align: right;
+  font-size: 1.0em;
+  float: right;
 }
