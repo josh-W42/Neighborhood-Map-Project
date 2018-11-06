@@ -1,40 +1,83 @@
 import React, { Component } from 'react';
-import {Map, InfoWindow, Marker} from 'google-maps-react';
+import {Map, Marker, InfoWindow} from 'google-maps-react';
+import {searchNearby} from './utils/GoogleApiHelpers.js';
+import SideUI from './SideUI.js';
 
 class MapContainer extends Component {
+
+  state = {
+    places: [],
+    map: {},
+
+    infoWindowOpen: false,
+    activeMarker: {}
+  }
 
   onMarkerClick() {
     console.log(this);
   }
 
+  onReady(mapProps, map) {
+    this.setState({
+      map: map
+    });
+    const {google} = this.props;
+    const options = {
+      location: map.center,
+      radius: '1000',
+      types: ['restaurant']
+    }
+    searchNearby(google, map, options)
+    .then((results) => {
+      this.setState({
+        places: results
+      });
+    }).catch((response, status) => {
+      console.log(status);
+      console.log(response);
+    });
+  }
+
   render() {
 
     return (
-      <Map
-        google={this.props.google}
-        zoom={14}
-        initialCenter={{
+      <div>
+        <SideUI
+          google={this.props.google}
+          places={this.state.places}
+          map={this.state.map}
+          onMapUpdate={ (places) => this.setState({ places: places }) }
+          />
+        <Map
+          onReady={this.onReady.bind(this)}
+          google={this.props.google}
+          zoom={16}
+          initialCenter={{
             lat: 34.069064,
             lng: -118.445050
           }}
-        >
-
-        <Marker onClick={this.onMarkerClick}
+          >
+          {console.log(this.state.places)}
+          {
+            this.state.places.map( (place) => (
+              <Marker
+                key={place.id}
+                onClick={() => this.onMarkerClick()}
                 animation={this.props.google.maps.Animation.DROP}
                 position={{
-                    lat: 34.063793,
-                    lng: -118.445796
-                  }}
-                name={'Current location'}
-
-                />
-
-        <InfoWindow onClose={this.onInfoWindowClose}>
-            <div>
-              <h1>Hello</h1>
-            </div>
-        </InfoWindow>
-      </Map>
+                  lat: place.geometry.location.lat(),
+                  lng: place.geometry.location.lng()
+                }}
+                name={place.name}
+              />
+            ))
+          }
+          <InfoWindow
+            marker={this.state.activeMarker}
+            visible={this.state.infoWindowOpen}
+          />
+        </Map>
+      </div>
     );
   }
 }
