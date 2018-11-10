@@ -18,25 +18,60 @@ class MapContainer extends Component {
   }
 
   onReady(mapProps, map) {
-    this.setState({
-      map: map
-    });
-    const {google} = this.props;
-    const options = {
-      location: map.center,
-      radius: '1000',
-      types: ['restaurant']
-    }
-    searchNearby(google, map, options)
-    .then((results) => {
+    new Promise((resolve) => {
+      this.setCurrentLocation(map, resolve)
+    })
+    .then(() => {
       this.setState({
-        places: results
+        map: map
       });
-    }).catch((response, status) => {
-      console.log(status);
-      console.log(response);
+      const {google} = this.props;
+      const options = {
+        location: map.center,
+        radius: '1000',
+        types: ['restaurant', 'cafe', 'food']
+      }
+      searchNearby(google, map, options)
+      .then((results) => {
+        this.setState({
+          places: results
+        });
+      }).catch((response, status) => {
+        console.log(status);
+        console.log(response);
+      });
     });
   }
+
+  setCurrentLocation(map, callback) {
+    // returns an object with lat lng props
+
+    let options = {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0
+    };
+
+    function error(error) {
+      console.warn(`ERROR(${error.code}): ${error.message}`);
+    }
+
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        let cord = position.coords;
+        let location = {
+          lat: cord.latitude,
+          lng: cord.longitude
+        };
+        map.setCenter(location);
+        callback();
+      }, error, options);
+    } else {
+      console.log('Geolocation Unavalible, using default location');
+      callback();
+    }
+  }
+
 
   render() {
 
@@ -49,13 +84,10 @@ class MapContainer extends Component {
           onMapUpdate={ (places) => this.setState({ places: places }) }
           />
         <Map
+
           onReady={this.onReady.bind(this)}
           google={this.props.google}
           zoom={16}
-          initialCenter={{
-            lat: 34.069064,
-            lng: -118.445050
-          }}
           >
           {console.log(this.state.places)}
           {
