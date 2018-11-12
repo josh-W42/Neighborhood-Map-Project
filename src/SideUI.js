@@ -5,6 +5,8 @@ import { searchFor, searchNearby } from './utils/GoogleApiHelpers.js'
 class SideUI extends Component {
 
   onSearch(input) {
+    // This function is called when a user uses the text input field in sideUI
+    // Makes a call to the google maps places api
 
     const map = this.props.map;
     const {google} = this.props;
@@ -25,6 +27,8 @@ class SideUI extends Component {
   }
 
   onNearbySearch(catagory) {
+    // This function is called when users select from the sideUI table.
+    // Makes a call to the google maps place api
 
     const map = this.props.map;
     const {google} = this.props;
@@ -72,7 +76,11 @@ class SideUI extends Component {
         <div className="mainUISection">
           <h1>What would you like to search?</h1>
           <form>
-            <input className="searchInput" type="text" placeholder="Name of Venue or Address"/>
+            <input
+              className="searchInput"
+              type="text"
+              placeholder="Name of Venue or Address"
+            />
             <input
               className="searchSubmitBtn"
               value="Search"
@@ -131,11 +139,12 @@ class SideUI extends Component {
                   });
                   this.props.onResultClick(place);
                 }}
-                >
+              >
                 <img
                   className="businessImage"
                   src={place.icon}
-                  alt={place.name} />
+                  alt={place.name}
+                />
                 <div className='businessInfo'>
                   <h3 className="businessName">{place.name}</h3>
                   <p className="businessAddress">

@@ -15,6 +15,8 @@ class MapContainer extends Component {
 
   }
 
+  // This function will asign a marker as 'active', so that its' data can
+  // be made avalible to other components, like info window
   onMarkerClick = (props, marker, e) => {
     this.setState({
       activePlace: props.placeData,
@@ -23,6 +25,10 @@ class MapContainer extends Component {
     });
   }
 
+  /*
+    When the google map is ready, it will attempt to get the current location
+    of the device and preform a local search for places that may be of interest.
+   */
   onReady(mapProps, map) {
     new Promise((resolve) => {
       this.setCurrentLocation(map, resolve)
@@ -50,8 +56,13 @@ class MapContainer extends Component {
     });
   }
 
+ /*
+   Sets the center location for the map.
+
+   If geolocation is not avalible for this browser or access is denied, the
+   default google maps location, san fransisco, CA will be used.
+ */
   setCurrentLocation(map, callback) {
-    // returns an object with lat lng props
 
     let options = {
       enableHighAccuracy: true,
