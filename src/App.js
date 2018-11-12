@@ -2,11 +2,12 @@ import React, { Component } from 'react';
 import './App.css';
 import Map from './Map.js';
 import {GoogleApiWrapper} from 'google-maps-react';
+import { apiKey } from './utils/GoogleApiHelpers.js';
 
 
 export class App extends Component {
 
-  // This function handles sideUI functionality.  
+  // This function handles sideUI functionality.
   onHamburgerClick() {
     let hamburger = document.querySelector('.hamburger');
     let sideUI = document.querySelector('#sideUI');
@@ -38,5 +39,5 @@ export class App extends Component {
 }
 
 export default GoogleApiWrapper({
-  apiKey: 'AIzaSyDXbgkEoSEdXPyG7GDmuf7Mb1wW8RZ1Ek4'
+  apiKey: apiKey
 })(App)
