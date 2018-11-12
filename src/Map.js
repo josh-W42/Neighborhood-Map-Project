@@ -10,11 +10,17 @@ class MapContainer extends Component {
     map: {},
 
     infoWindowOpen: false,
-    activeMarker: {}
+    activeMarker: {},
+    activePlace: {},
+
   }
 
-  onMarkerClick() {
-    console.log(this);
+  onMarkerClick = (props, marker, e) => {
+    this.setState({
+      activePlace: props.placeData,
+      infoWindowOpen: true,
+      activeMarker: marker
+    });
   }
 
   onReady(mapProps, map) {
@@ -29,7 +35,7 @@ class MapContainer extends Component {
       const options = {
         location: map.center,
         radius: '1000',
-        types: ['restaurant', 'cafe', 'food']
+        type: ['point_of_interest']
       }
       searchNearby(google, map, options)
       .then((results) => {
@@ -37,6 +43,7 @@ class MapContainer extends Component {
           places: results
         });
       }).catch((response, status) => {
+        alert("Error in Nearby Search");
         console.log(status);
         console.log(response);
       });
@@ -53,6 +60,7 @@ class MapContainer extends Component {
     };
 
     function error(error) {
+      alert('Geolocation Serivce Failed, using default location');
       console.warn(`ERROR(${error.code}): ${error.message}`);
     }
 
@@ -67,6 +75,7 @@ class MapContainer extends Component {
         callback();
       }, error, options);
     } else {
+      alert('Geolocation Unavalible, using default location');
       console.log('Geolocation Unavalible, using default location');
       callback();
     }
@@ -82,32 +91,67 @@ class MapContainer extends Component {
           places={this.state.places}
           map={this.state.map}
           onMapUpdate={ (places) => this.setState({ places: places }) }
+          onResultClick={ (place) => {
+            this.setState({
+              activePlace: place,
+              infoWindowOpen: false
+             });
+          }}
           />
         <Map
-
+          clickableIcons={true}
+          fullscreenControl={false}
+          mapTypeControl={false}
           onReady={this.onReady.bind(this)}
           google={this.props.google}
           zoom={16}
           >
-          {console.log(this.state.places)}
           {
-            this.state.places.map( (place) => (
-              <Marker
-                key={place.id}
-                onClick={() => this.onMarkerClick()}
-                animation={this.props.google.maps.Animation.DROP}
-                position={{
-                  lat: place.geometry.location.lat(),
-                  lng: place.geometry.location.lng()
-                }}
-                name={place.name}
-              />
-            ))
+            this.state.places.map( (place) =>
+              {
+                return (
+                  <Marker
+                    key={place.id}
+                    placeData={place}
+                    onClick={this.onMarkerClick}
+                    position={{
+                      lat: place.geometry.location.lat(),
+                      lng: place.geometry.location.lng()
+                    }}
+                    animation={
+                      (this.state.activePlace === place) ? (
+                        this.props.google.maps.Animation.BOUNCE
+                      ):""
+                    }
+                    name={place.name}
+                    />
+                )
+              }
+             )
           }
           <InfoWindow
             marker={this.state.activeMarker}
             visible={this.state.infoWindowOpen}
-          />
+            onClose={ () => this.setState({
+              infoWindowOpen: false,
+              activePlace: {},
+              activeMarker: {},
+            })}
+          >
+          <div>
+            <h3>{this.state.activePlace.name}</h3>
+            <p>
+              {
+                (this.state.activePlace) ? (
+                  (this.state.activePlace.vicinity) ? (
+                    this.state.activePlace.vicinity
+                  ):(
+                    this.state.activePlace.formatted_address
+                  )): ""
+              }
+            </p>
+          </div>
+          </InfoWindow>
         </Map>
       </div>
     );
