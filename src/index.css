@@ -16,12 +16,13 @@ code {
 
 .topSection {
   position: absolute;
-  background: #F2F1EF;
-  height: 5%;
+  background: #6C7A89;
+  height: 7%;
   width: 100%;
   z-index: 1;
   overflow: visible;
   margin: 0px;
+  color: white;
 }
 
 .topSection h1 {
@@ -32,15 +33,25 @@ code {
   display: none;
 }
 
-@media screen and (max-width: 991px) {
+@media screen and (max-width: 545px) {
+  .topSection {
+    height: 5%;
+    min-height: 50px;
+    font-size: 0.75em;
+  }
+}
+
+@media screen and (max-width: 1025px) {
+
+
   .hamburger {
     display: block;
     position: absolute;
     left: 0;
     width: 50px;
     height: 50px;
-    background: #F2F1EF;
-    transition: 3s;
+    background: #6C7A89;
+    transition: 0.5s;
   }
 
   .hamburger:hover {
@@ -55,7 +66,7 @@ code {
     margin-top: 5px;
     margin-left: 5px;
     background: black;
-    transition: 2s;
+    transition: 0.5s;
   }
 
   .cross .bar1 {
@@ -79,16 +90,17 @@ code {
 
  #sideUI {
    color: #6C7A89;
-   position: absolute;
+   position: fixed;
    top: 0;
    left: 0;
    height: 100%;
    width: 20%;
+   max-width: 20%;
    background: #F2F1EF;
    box-shadow: 1px 1px 15px grey;
    z-index: 1;
    overflow-y: scroll;
-   transition: 3s;
+   transition: 0.5s;
  }
 
  #sideUI h1 {
@@ -117,7 +129,11 @@ code {
 
 
 #inputTable {
-  text-align: left;
+  text-align: center;
+}
+
+#inputTable td {
+  display: inline-table;
 }
 
 .hamburgerSection {
@@ -180,9 +196,25 @@ code {
   text-align: right;
 }
 
-@media screen and (max-width: 991px) {
+@media screen and (max-width: 545px) {
   #sideUI {
-    left: -45%;
-    width: 45%;
+    overflow-x: hidden;
+  }
+
+  #inputTable td {
+    display: inline-table;
+  }
+
+  .businessImage {
+    height: 50px;
+    width: 50px;
+  }
+}
+
+@media screen and (max-width: 1025px) {
+  #sideUI {
+    left: -50%;
+    width: 50%;
+    max-width: 50%;
   }
 }
