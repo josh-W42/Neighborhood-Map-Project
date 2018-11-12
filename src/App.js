@@ -10,11 +10,11 @@ export class App extends Component {
     let hamburger = document.querySelector('.hamburger');
     let sideUI = document.querySelector('#sideUI');
     if(hamburger.classList.contains('cross')) {
-      sideUI.style.left = '-45%';
+      sideUI.style.left = '-50%';
       hamburger.style.left = '0%';
     } else {
       sideUI.style.left = '0px';
-      hamburger.style.left = '45%';
+      hamburger.style.left = '50%';
     }
     hamburger.classList.toggle('cross');
   }
@@ -23,7 +23,7 @@ export class App extends Component {
     return (
       <div className="App">
         <div className="topSection">
-          <div className="hamburger" onClick={() => this.onHamburgerClick()}>
+          <div className="hamburger" onClick={this.onHamburgerClick}>
             <div className="bar1"></div>
             <div className="bar2"></div>
             <div className="bar3"></div>
