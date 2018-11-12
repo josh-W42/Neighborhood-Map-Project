@@ -17,6 +17,8 @@ class SideUI extends Component {
     .then((results) => {
       this.props.onMapUpdate(results);
     }).catch((response, status) => {
+      this.props.onMapUpdate(response);
+      alert("No Search Results");
       console.log(status);
       console.log(response);
     });
@@ -38,7 +40,7 @@ class SideUI extends Component {
         options.keyword = ['food'];
         break;
       case 'beauty':
-        options.keyword = ['beauty', 'hair_salon'];
+        options.keyword = ['spa'];
         break;
       case 'banking':
         options.keyword = ['finance', 'bank', 'atm'];
@@ -47,16 +49,17 @@ class SideUI extends Component {
         options.keyword = ['school', 'library', 'museum'];
         break;
       case 'entertainment':
-        options.keyword = ['stadium', 'campground'];
+        options.keyword = ['theater'];
         break;
       default:
-        alert("i'm not working");
+        alert("Error in Filter Search");
     }
 
     searchNearby(google, map, options)
     .then((results) => {
       this.props.onMapUpdate(results);
     }).catch((response, status) => {
+      this.props.onMapUpdate(response);
       console.log(status);
       console.log(response);
     });
@@ -83,35 +86,40 @@ class SideUI extends Component {
           <h2>Search Nearby results by type:</h2>
           <form onChange={ (e) => this.onNearbySearch(e.target.value) }>
             <table id="inputTable">
-              <tr>
-                <td>
-                  <input type="radio" name="searchType" id="food" value="food" defaultChecked />
-                  <label for="food">Food</label>
-                </td>
-                <td>
-                  <input type="radio" name="searchType" id="banking" value="banking" />
-                  <label for="banking">Banking</label>
-                </td>
-                <td>
-                  <input type="radio" name="searchType" id="beauty" value="beauty" />
-                  <label for="beauty">Beauty</label>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <input type="radio" name="searchType" id="entertainment" value="entertainment" />
-                  <label for="entertainment">Entertainment</label>
-                </td>
-                <td>
-                  <input type="radio" name="searchType" id="educational" value="educational" />
-                  <label for="educational">Educational</label>
-                </td>
-              </tr>
+              <tbody>
+                <tr>
+                  <td>
+                    <label htmlFor="food">Food</label>
+                    <input type="radio" name="searchType" id="food" value="food" />
+                  </td>
+                  <td>
+                    <label htmlFor="banking">Banking</label>
+                    <input type="radio" name="searchType" id="banking" value="banking" />
+                  </td>
+                  <td>
+                    <label htmlFor="beauty">Beauty</label>
+                    <input type="radio" name="searchType" id="beauty" value="beauty" />
+                  </td>
+                  <td>
+                    <label htmlFor="entertainment">Entertainment</label>
+                    <input type="radio" name="searchType" id="entertainment" value="entertainment" />
+                  </td>
+                  <td>
+                    <label htmlFor="educational">Educational</label>
+                    <input type="radio" name="searchType" id="educational" value="educational" />
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </form>
 
           <h2>Results:</h2>
           <div className="resultsContainer">
+            {
+              (this.props.places.length === 0) ? (
+                <p>No results found</p>
+              ) : ("")
+            }
             {this.props.places.map( (place) => (
               <div
                 key={place.id}
@@ -121,6 +129,7 @@ class SideUI extends Component {
                     lat: place.geometry.location.lat(),
                     lng: place.geometry.location.lng()
                   });
+                  this.props.onResultClick(place);
                 }}
                 >
                 <img
