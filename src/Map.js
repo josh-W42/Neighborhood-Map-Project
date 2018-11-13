@@ -1,7 +1,12 @@
 import React, { Component } from 'react';
 import {Map, Marker, InfoWindow} from 'google-maps-react';
-import {searchNearby} from './utils/GoogleApiHelpers.js';
 import SideUI from './SideUI.js';
+
+var foursquare = require('react-foursquare')({
+  clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
+  clientSecret: process.env.REACT_APP_FOURSQUARE_CLIENT_SECRET
+});
+
 
 class MapContainer extends Component {
 
@@ -21,7 +26,11 @@ class MapContainer extends Component {
     this.setState({
       activePlace: props.placeData,
       infoWindowOpen: true,
-      activeMarker: marker
+      activeMarker: marker,
+
+      filteredArray: [],
+
+      filteredArrayReady: false
     });
   }
 
@@ -38,21 +47,20 @@ class MapContainer extends Component {
       this.setState({
         map: map
       });
-      const {google} = this.props;
       const options = {
-        location: map.center,
+        ll: `${map.center.lat()}, ${map.center.lng()}`,
         radius: '1000',
-        type: ['point_of_interest']
       }
-      searchNearby(google, map, options)
-      .then((results) => {
+
+      foursquare.venues.explore(options)
+      .then( (results) => {
         this.setState({
-          places: results
-        });
-      }).catch((response, status) => {
-        alert("Error in Nearby Search");
-        console.log(status);
-        console.log(response);
+          places: results.response.groups[0].items
+        })
+      })
+      .catch( (error) => {
+          alert("Error in Nearby Search");
+          console.log(error);
       });
     });
   }
@@ -93,8 +101,21 @@ class MapContainer extends Component {
     }
   }
 
+  getDevliveryIcon(place) {
+    const providerIcon = place.venue.delivery.provider.icon;
+    const iconUrl = `${providerIcon.prefix}${providerIcon.sizes[0]}${providerIcon.name}`;
+    return(iconUrl);
+  }
+
 
   render() {
+
+    let placeArray;
+    if(this.state.filteredArrayReady) {
+      placeArray = this.state.filteredArray;
+    } else {
+      placeArray = this.state.places;
+    }
 
     return (
       <div>
@@ -102,10 +123,15 @@ class MapContainer extends Component {
           google={this.props.google}
           places={this.state.places}
           map={this.state.map}
-          onMapUpdate={ (places) => this.setState({ places: places }) }
+          onFilterClose={ () => this.setState({ filteredArrayReady: false }) }
+          onFilterUpdate={ (filterdPlaces) => this.setState({
+            filteredArray: filterdPlaces,
+            filteredArrayReady: true
+          })}
+          onMapUpdate={ (places) => this.setState({places: places.response.groups[0].items }) }
           onResultClick={ (place) => {
             this.setState({
-              activePlace: place,
+              activePlace: place.venue,
               infoWindowOpen: false
              });
           }}
@@ -121,30 +147,31 @@ class MapContainer extends Component {
           zoom={16}
           >
           {
-            this.state.places.map( (place) =>
+            placeArray.map( (place) =>
               {
                 return (
                   <Marker
                     tabIndex="0"
-                    key={place.id}
+                    key={place.venue.id}
                     placeData={place}
                     onClick={this.onMarkerClick}
                     position={{
-                      lat: place.geometry.location.lat(),
-                      lng: place.geometry.location.lng()
+                      lat: place.venue.location.lat,
+                      lng: place.venue.location.lng
                     }}
                     animation={
-                      (this.state.activePlace === place) ? (
-                        this.props.google.maps.Animation.BOUNCE
-                      ):""
+                      (this.state.activePlace === place.venue) ? (
+                          this.props.google.maps.Animation.BOUNCE
+                        ):("")
                     }
-                    name={place.name}
+                    name={place.venue.name}
                     />
                 )
               }
              )
           }
           <InfoWindow
+            role="dialog"
             marker={this.state.activeMarker}
             visible={this.state.infoWindowOpen}
             onClose={ () => this.setState({
@@ -153,19 +180,48 @@ class MapContainer extends Component {
               activeMarker: {},
             })}
           >
-          <div>
-            <h3>{this.state.activePlace.name}</h3>
-            <p>
-              {
-                (this.state.activePlace) ? (
-                  (this.state.activePlace.vicinity) ? (
-                    this.state.activePlace.vicinity
-                  ):(
-                    this.state.activePlace.formatted_address
-                  )): ""
-              }
-            </p>
-          </div>
+          {
+            (this.state.places.includes(this.state.activePlace)) ? (
+
+              <div className="infoWindow">
+                <h3 tabIndex="0">{this.state.activePlace.venue.name}</h3>
+                {
+                  (this.state.activePlace.venue.delivery) ? (
+                    <div className="deliveryOptions">
+                      <p tabIndex="0" className="deliveryMessage">
+                        {
+                          `Delivery options provided by
+                          ${this.state.activePlace.venue.delivery.provider.name}!
+                          Click the icon on the left for more info`
+                        }
+                      </p>
+                      <a tabIndex="0" href={this.state.activePlace.venue.delivery.url}>
+                        <img
+                          className="deliveryLinkImg"
+                          tabIndex="0"
+                          src={this.getDevliveryIcon(this.state.activePlace)}
+                          alt={
+                            `Delivery link from
+                            ${this.state.activePlace.venue.delivery.provider.name}`
+                          }
+                        />
+                      </a>
+                    </div>
+                  ):("")
+                }
+                <p tabIndex="0" className="infoWindowCatagory">
+                  {
+                    (this.state.activePlace.venue.categories.length > 0) ? (
+                      this.state.activePlace.venue.categories[0].name
+                    ):("")
+                  }
+                </p>
+                <p tabIndex="0" className="infoWindowAddress">
+                  {this.state.activePlace.venue.location.formattedAddress}
+                </p>
+              </div>
+            ):(<div></div>)
+          }
           </InfoWindow>
         </Map>
       </div>
