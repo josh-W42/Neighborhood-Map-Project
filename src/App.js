@@ -2,7 +2,9 @@ import React, { Component } from 'react';
 import './App.css';
 import Map from './Map.js';
 import {GoogleApiWrapper} from 'google-maps-react';
-import { apiKey } from './utils/GoogleApiHelpers.js';
+import { register } from './serviceWorker.js';
+
+register('./');
 
 
 export class App extends Component {
@@ -39,5 +41,5 @@ export class App extends Component {
 }
 
 export default GoogleApiWrapper({
-  apiKey: apiKey
+  apiKey: process.env.REACT_APP_GOOGLE_MAP_API_KEY
 })(App)
