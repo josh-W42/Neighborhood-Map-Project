@@ -71,6 +71,19 @@ function registerValidSW(swUrl, config) {
                   'tabs for this page are closed. See http://bit.ly/CRA-PWA.'
               );
 
+              caches.open('googleMap-v1').then(function(cache) {
+                return cache.addAll([
+                  './',
+                  './App.css',
+                  './Map.js',
+                  './index.css',
+                  './index.js',
+                  './Map.js',
+                  './SideUI.js',
+                  './utils/GoogleApiHelpers.js'
+                ]);
+              });
+
               // Execute callback
               if (config && config.onUpdate) {
                 config.onUpdate(registration);
