@@ -4,9 +4,11 @@ import { searchFor, searchNearby } from './utils/GoogleApiHelpers.js'
 
 class SideUI extends Component {
 
+  /*
+   This function is called when a user uses the text input field in sideUI
+   Makes a call to the google maps places api
+  */
   onSearch(input) {
-    // This function is called when a user uses the text input field in sideUI
-    // Makes a call to the google maps places api
 
     const map = this.props.map;
     const {google} = this.props;
@@ -18,6 +20,10 @@ class SideUI extends Component {
     searchFor(google, map, options)
     .then((results) => {
       this.props.onMapUpdate(results);
+      this.props.map.panTo({
+        lat: results[0].geometry.location.lat(),
+        lng: results[0].geometry.location.lng()
+      });
     }).catch((response, status) => {
       this.props.onMapUpdate(response);
       alert("No Search Results");
@@ -26,9 +32,11 @@ class SideUI extends Component {
     });
   }
 
+  /*
+    This function is called when users select from the sideUI table.
+    Makes a call to the google maps place api
+  */
   onNearbySearch(catagory) {
-    // This function is called when users select from the sideUI table.
-    // Makes a call to the google maps place api
 
     const map = this.props.map;
     const {google} = this.props;
@@ -69,6 +77,14 @@ class SideUI extends Component {
     });
   }
 
+  resultClick(place) {
+    this.props.map.panTo({
+      lat: place.geometry.location.lat(),
+      lng: place.geometry.location.lng()
+    });
+    this.props.onResultClick(place);
+  }
+
   render() {
 
     return (
@@ -96,23 +112,23 @@ class SideUI extends Component {
             <table id="inputTable">
               <tbody>
                 <tr>
-                  <td>
+                  <td tabIndex="0">
                     <label htmlFor="food">Food</label>
                     <input type="radio" name="searchType" id="food" value="food" />
                   </td>
-                  <td>
+                  <td tabIndex="0">
                     <label htmlFor="banking">Banking</label>
                     <input type="radio" name="searchType" id="banking" value="banking" />
                   </td>
-                  <td>
+                  <td tabIndex="0">
                     <label htmlFor="beauty">Beauty</label>
                     <input type="radio" name="searchType" id="beauty" value="beauty" />
                   </td>
-                  <td>
+                  <td tabIndex="0">
                     <label htmlFor="entertainment">Entertainment</label>
                     <input type="radio" name="searchType" id="entertainment" value="entertainment" />
                   </td>
-                  <td>
+                  <td tabIndex="0">
                     <label htmlFor="educational">Educational</label>
                     <input type="radio" name="searchType" id="educational" value="educational" />
                   </td>
@@ -130,14 +146,16 @@ class SideUI extends Component {
             }
             {this.props.places.map( (place) => (
               <div
+                tabIndex="0"
                 key={place.id}
                 className="result"
+                onKeyUp={(e) => {
+                  if(e.keyCode === 13) {
+                    this.resultClick(place);
+                  }
+                }}
                 onClick={() => {
-                  this.props.map.panTo({
-                    lat: place.geometry.location.lat(),
-                    lng: place.geometry.location.lng()
-                  });
-                  this.props.onResultClick(place);
+                  this.resultClick(place);
                 }}
               >
                 <img
