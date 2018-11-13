@@ -27,7 +27,8 @@ class MapContainer extends Component {
 
   /*
     When the google map is ready, it will attempt to get the current location
-    of the device and preform a local search for places that may be of interest.
+    of the device and then preform a local search for places that may be
+    of interest.
    */
   onReady(mapProps, map) {
     new Promise((resolve) => {
@@ -110,6 +111,8 @@ class MapContainer extends Component {
           }}
           />
         <Map
+          role="application"
+          tabindex="0"
           clickableIcons={true}
           fullscreenControl={false}
           mapTypeControl={false}
@@ -122,6 +125,7 @@ class MapContainer extends Component {
               {
                 return (
                   <Marker
+                    tabIndex="0"
                     key={place.id}
                     placeData={place}
                     onClick={this.onMarkerClick}
