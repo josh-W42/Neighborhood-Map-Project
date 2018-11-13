@@ -1,31 +1,49 @@
 import React, { Component } from 'react';
-import { searchFor, searchNearby } from './utils/GoogleApiHelpers.js'
 
+var foursquare = require('react-foursquare')({
+  clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
+  clientSecret: process.env.REACT_APP_FOURSQUARE_CLIENT_SECRET
+});
 
 class SideUI extends Component {
 
+
+  state = {
+    activeRadio: '',
+    places: this.props.places,
+
+    filteredArrayReady: false
+  }
+
+
   /*
    This function is called when a user uses the text input field in sideUI
-   Makes a call to the google maps places api
+   uses foursquare explore call
   */
   onSearch(input) {
 
+    this.setState({
+      places: this.props.places,
+      filteredArrayReady: false
+     });
+    this.props.onFilterClose();
+
     const map = this.props.map;
-    const {google} = this.props;
     const options = {
-      input: input,
-      location: map.center,
-      radius: '500'
+      ll: `${map.center.lat()}, ${map.center.lng()}`,
+      query: input,
+      sortByDistance: 1,
     }
-    searchFor(google, map, options)
+
+
+    foursquare.venues.explore(options)
     .then((results) => {
       this.props.onMapUpdate(results);
       this.props.map.panTo({
-        lat: results[0].geometry.location.lat(),
-        lng: results[0].geometry.location.lng()
+        lat: results.response.groups[0].items[0].venue.location.lat,
+        lng: results.response.groups[0].items[0].venue.location.lng
       });
     }).catch((response, status) => {
-      this.props.onMapUpdate(response);
       alert("No Search Results");
       console.log(status);
       console.log(response);
@@ -34,70 +52,115 @@ class SideUI extends Component {
 
   /*
     This function is called when users select from the sideUI table.
-    Makes a call to the google maps place api
+    Uses foursquare explore call
   */
   onNearbySearch(catagory) {
 
-    const map = this.props.map;
-    const {google} = this.props;
+    this.setState({
+      places: this.props.places,
+      filteredArrayReady: false
+    });
+    this.props.onFilterClose();
 
     let options = {
-      location: map.center,
-      radius: '2000',
-      rankby: 'distance'
+      ll: `${this.props.map.center.lat()}, ${this.props.map.center.lng()}`,
+      radius: '1000',
     }
 
     switch (catagory) {
       case 'food':
-        options.keyword = ['food'];
+        this.setState({ activeRadio: 'food' });
+        options.section = 'food';
         break;
-      case 'beauty':
-        options.keyword = ['spa'];
+      case 'arts':
+        this.setState({ activeRadio: 'arts' });
+        options.section = 'arts';
         break;
-      case 'banking':
-        options.keyword = ['finance', 'bank', 'atm'];
+      case 'shopping':
+        this.setState({ activeRadio: 'shops' });
+        options.section = 'shops';
         break;
-      case 'educational':
-        options.keyword = ['school', 'library', 'museum'];
-        break;
-      case 'entertainment':
-        options.keyword = ['theater'];
+      case 'popular':
+        this.setState({ activeRadio: 'trending' });
+        options.section = 'trending';
         break;
       default:
         alert("Error in Filter Search");
     }
 
-    searchNearby(google, map, options)
+    foursquare.venues.explore(options)
     .then((results) => {
       this.props.onMapUpdate(results);
-    }).catch((response, status) => {
-      this.props.onMapUpdate(response);
-      console.log(status);
-      console.log(response);
-    });
+    })
+    .catch((error) => {
+      alert("No nearby results for that catagory")
+      console.log(error);
+    })
   }
 
+// Function is called when a result is selected.
   resultClick(place) {
     this.props.map.panTo({
-      lat: place.geometry.location.lat(),
-      lng: place.geometry.location.lng()
+      lat: place.venue.location.lat,
+      lng: place.venue.location.lng
     });
     this.props.onResultClick(place);
   }
 
+  /*
+    This is a helper function for getting a place icon from the foursquare api
+    to grab a picture from foursquare, you must connect a prefix api call, the
+    diminsions of the image and the sulfix of the api call. Additionally "bg_"
+    is used to specify that the icon has a background.
+  */
+  getPlaceIcon(place) {
+    if(place.venue.categories.length > 0) {
+      const placeIcon = place.venue.categories[0].icon;
+      const iconUrl = `${placeIcon.prefix}bg_64${placeIcon.suffix}`;
+      return(iconUrl);
+    } else {
+      return ""
+    }
+  }
+
+  onFilterSelect(filterOption) {
+    if(filterOption === 'No Filter') {
+      this.setState({
+        filteredArrayReady: false,
+        places: this.props.places
+      });
+      this.props.onFilterClose();
+    } else {
+      const filteredArray = this.props.places.filter( (place) => place.venue.categories[0].name.includes(filterOption));
+      this.setState({
+        filteredArrayReady: true,
+        places: filteredArray
+      });
+      this.props.onFilterUpdate(filteredArray);
+    }
+  }
+
   render() {
+
+    let placeArray;
+    if(this.state.filteredArrayReady) {
+      placeArray = this.state.places;
+    } else {
+      placeArray = this.props.places;
+    }
 
     return (
       <div id="sideUI">
         <div className="mainUISection">
-          <h1>What would you like to search?</h1>
+          <h1 tabIndex="0">What would you like to search?</h1>
           <form>
             <input
               className="searchInput"
               type="text"
-              placeholder="Name of Venue or Address"
+              placeholder="Ex. Tacos, Movies, Parks"
             />
             <input
+              aria-label="Search button"
               className="searchSubmitBtn"
               value="Search"
               type="submit"
@@ -107,7 +170,7 @@ class SideUI extends Component {
               }} />
           </form>
 
-          <h2>Search Nearby results by type:</h2>
+          <h2 tabIndex="0">Search Nearby results by type:</h2>
           <form onChange={ (e) => this.onNearbySearch(e.target.value) }>
             <table id="inputTable">
               <tbody>
@@ -117,37 +180,80 @@ class SideUI extends Component {
                     <input type="radio" name="searchType" id="food" value="food" />
                   </td>
                   <td tabIndex="0">
-                    <label htmlFor="banking">Banking</label>
-                    <input type="radio" name="searchType" id="banking" value="banking" />
+                    <label htmlFor="arts">Artistic</label>
+                    <input type="radio" name="searchType" id="arts" value="arts" />
                   </td>
                   <td tabIndex="0">
-                    <label htmlFor="beauty">Beauty</label>
-                    <input type="radio" name="searchType" id="beauty" value="beauty" />
+                    <label htmlFor="popular">Popular Locations</label>
+                    <input type="radio" name="searchType" id="popular" value="popular" />
                   </td>
                   <td tabIndex="0">
-                    <label htmlFor="entertainment">Entertainment</label>
-                    <input type="radio" name="searchType" id="entertainment" value="entertainment" />
-                  </td>
-                  <td tabIndex="0">
-                    <label htmlFor="educational">Educational</label>
-                    <input type="radio" name="searchType" id="educational" value="educational" />
+                    <label htmlFor="shopping">Shopping</label>
+                    <input type="radio" name="searchType" id="shopping" value="shopping" />
                   </td>
                 </tr>
               </tbody>
             </table>
           </form>
 
-          <h2>Results:</h2>
+          {
+            (this.state.activeRadio === 'food') ? (
+              <div>
+                <h3 tabIndex="0">Filter Food by Cuisine:</h3>
+                <select role="combobox" aria-controls="" aria-expanded onChange={(e) => this.onFilterSelect(e.target.value)}>
+                  <option>No Filter</option>
+                  <option>Italian</option>
+                  <option>Pizza</option>
+                  <option>American</option>
+                  <option>Mexican</option>
+                  <option>Sushi</option>
+                </select>
+              </div>
+            ):("")
+          }
+          {
+            (this.state.activeRadio === 'arts') ? (
+              <div>
+                <h3 tabIndex="0">Filter Venues by Type:</h3>
+                <select role="combobox" aria-controls="" aria-expanded onChange={(e) => this.onFilterSelect(e.target.value)} >
+                  <option>No Filter</option>
+                  <option>Dance</option>
+                  <option>Theater</option>
+                  <option>Music Venue</option>
+                  <option>Art Gallery</option>
+                  <option>Museum</option>
+                </select>
+              </div>
+            ):("")
+          }
+          {
+            (this.state.activeRadio === 'shops') ? (
+              <div>
+                <h3 tabIndex="0">Filter Shops by Type:</h3>
+                <select onChange={(e) => this.onFilterSelect(e.target.value)}>
+                  <option>No Filter</option>
+                  <option>Bookstore</option>
+                  <option>Shopping Mall</option>
+                  <option>Cosmetics Shop</option>
+                  <option>Clothing Store</option>
+                  <option>Grocery Store</option>
+                </select>
+              </div>
+            ):("")
+          }
+
+          <h2 tabIndex="0">Results:</h2>
           <div className="resultsContainer">
             {
-              (this.props.places.length === 0) ? (
+              (placeArray.length === 0) ? (
                 <p>No results found</p>
               ) : ("")
             }
-            {this.props.places.map( (place) => (
+            {
+              placeArray.map( (place) => (
               <div
                 tabIndex="0"
-                key={place.id}
+                key={place.venue.id}
                 className="result"
                 onKeyUp={(e) => {
                   if(e.keyCode === 13) {
@@ -158,27 +264,28 @@ class SideUI extends Component {
                   this.resultClick(place);
                 }}
               >
-                <img
-                  className="businessImage"
-                  src={place.icon}
-                  alt={place.name}
-                />
+              <img
+                tabIndex="0"
+                className="businessImage"
+                src={this.getPlaceIcon(place)}
+                alt={place.venue.name}
+              />
                 <div className='businessInfo'>
-                  <h3 className="businessName">{place.name}</h3>
-                  <p className="businessAddress">
-                    { (place.vicinity) ? place.vicinity:place.formatted_address }
+                  <h3 tabIndex="0" className="businessName">{place.venue.name}</h3>
+                  <p>{
+                      (place.venue.categories.length > 0) ? (
+                        place.venue.categories[0].name
+                      ):("")
+                    }</p>
+                  <p tabIndex="0" className="businessAddress">
+                    {place.venue.location.formattedAddress}
                   </p>
                   <p className='businessOpen'>
-                    { (place.opening_hours) ? `Is currently: ${(place.opening_hours.open_now) ? 'Open':'Closed' }` : ''}
                   </p>
                 </div>
               </div>
             ))}
           </div>
-
-        </div>
-        <div className="hamburgerSection">
-          <div id="hamburger"></div>
         </div>
       </div>
     );
