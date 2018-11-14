@@ -38,11 +38,19 @@ class SideUI extends Component {
 
     foursquare.venues.explore(options)
     .then((results) => {
-      this.props.onMapUpdate(results);
-      this.props.map.panTo({
-        lat: results.response.groups[0].items[0].venue.location.lat,
-        lng: results.response.groups[0].items[0].venue.location.lng
-      });
+      if(results.meta.code === 200) {
+        if(results.response.totalResults > 0) {
+          this.props.onMapUpdate(results);
+          this.props.map.panTo({
+            lat: results.response.groups[0].items[0].venue.location.lat,
+            lng: results.response.groups[0].items[0].venue.location.lng
+          });
+        } else {
+          alert(results.response.warning.text);
+        }
+      } else {
+        console.log('Api Requst Failure');
+      }
     }).catch((response, status) => {
       alert("No Search Results");
       console.log(status);
@@ -90,10 +98,18 @@ class SideUI extends Component {
 
     foursquare.venues.explore(options)
     .then((results) => {
-      this.props.onMapUpdate(results);
+      if(results.meta.code === 200) {
+        if(results.response.totalResults > 0) {
+          this.props.onMapUpdate(results);
+        } else {
+          alert(results.response.warning.text);
+        }
+      } else {
+        console.log('Api Requst Failure');
+      }
     })
     .catch((error) => {
-      alert("No nearby results for that catagory")
+      alert("Error in local search")
       console.log(error);
     })
   }

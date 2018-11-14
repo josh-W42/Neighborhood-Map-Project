@@ -7,7 +7,6 @@ var foursquare = require('react-foursquare')({
   clientSecret: process.env.REACT_APP_FOURSQUARE_CLIENT_SECRET
 });
 
-
 class MapContainer extends Component {
 
   state = {
@@ -44,25 +43,34 @@ class MapContainer extends Component {
       this.setCurrentLocation(map, resolve)
     })
     .then(() => {
-      this.setState({
-        map: map
-      });
-      const options = {
-        ll: `${map.center.lat()}, ${map.center.lng()}`,
-        radius: '1000',
-      }
+      this.nearbySearch(map);
+    })
+    .catch((message) => {
+      this.nearbySearch(map);
+      console.log(message);
+    })
+  }
 
-      foursquare.venues.explore(options)
-      .then( (results) => {
-        this.setState({
-          places: results.response.groups[0].items
-        })
-      })
-      .catch( (error) => {
-          alert("Error in Nearby Search");
-          console.log(error);
-      });
+  nearbySearch(map) {
+    this.setState({
+      map: map
     });
+    const options = {
+      ll: `${map.center.lat()}, ${map.center.lng()}`,
+      radius: '1000',
+      section: 'trending'
+    }
+
+    foursquare.venues.explore(options)
+    .then( (results) => {
+      if(results.meta.code === 200) {
+        if(results.response.totalResults > 0) {
+          this.setState({
+            places: results.response.groups[0].items
+          })
+        }
+      }
+    })
   }
 
  /*
@@ -82,6 +90,7 @@ class MapContainer extends Component {
     function error(error) {
       alert('Geolocation Serivce Failed, using default location');
       console.warn(`ERROR(${error.code}): ${error.message}`);
+      callback();
     }
 
     if (navigator.geolocation) {
