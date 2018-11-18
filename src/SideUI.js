@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import backupResults from './utils/backupLocations.js';
 
 var foursquare = require('react-foursquare')({
   clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
@@ -40,7 +41,7 @@ class SideUI extends Component {
     .then((results) => {
       if(results.meta.code === 200) {
         if(results.response.totalResults > 0) {
-          this.props.onMapUpdate(results);
+          this.props.onMapUpdate(results.response.groups[0].items);
           this.props.map.panTo({
             lat: results.response.groups[0].items[0].venue.location.lat,
             lng: results.response.groups[0].items[0].venue.location.lng
@@ -50,12 +51,37 @@ class SideUI extends Component {
         }
       } else {
         console.log('Api Requst Failure');
+        this.backupSearch(input);
       }
     }).catch((response, status) => {
       alert("No Search Results");
       console.log(status);
       console.log(response);
     });
+  }
+
+  /*
+    This function should give functionality to the search feature but will only
+    apply to the small database of backup locations.
+  */
+  backupSearch(query){
+    let results = [];
+    Object.keys(backupResults).forEach((key) => {
+      backupResults[key].forEach((place) => {
+        const placeName = place.venue.name.toLowerCase();
+        const nameContainsQuery = placeName.includes(query.toLowerCase());
+        const placeCategory = place.venue.categories[0].name.toLowerCase();
+        const catagoryContainsQuery = placeCategory.includes(query.toLowerCase());
+        if (nameContainsQuery || catagoryContainsQuery || key === query.toLowerCase()) {
+          results.push(place);
+        }
+      });
+    });
+    if(results.length === 0) {
+      alert("No Search Results, try searching 'food' or 'store'");
+    } else {
+      this.props.onMapUpdate(results);
+    }
   }
 
   /*
@@ -75,22 +101,28 @@ class SideUI extends Component {
       radius: '1000',
     }
 
+    let backup;
+
     switch (catagory) {
       case 'food':
         this.setState({ activeRadio: 'food' });
         options.section = 'food';
+        backup = backupResults.food;
         break;
       case 'arts':
         this.setState({ activeRadio: 'arts' });
         options.section = 'arts';
+        backup = backupResults.arts;
         break;
       case 'shopping':
         this.setState({ activeRadio: 'shops' });
         options.section = 'shops';
+        backup = backupResults.shops;
         break;
       case 'popular':
         this.setState({ activeRadio: 'trending' });
         options.section = 'trending';
+        backup = backupResults.trending;
         break;
       default:
         alert("Error in Filter Search");
@@ -100,17 +132,14 @@ class SideUI extends Component {
     .then((results) => {
       if(results.meta.code === 200) {
         if(results.response.totalResults > 0) {
-          this.props.onMapUpdate(results);
+          this.props.onMapUpdate(results.response.groups[0].items);
         } else {
           alert(results.response.warning.text);
         }
       } else {
-        console.log('Api Requst Failure');
+        console.log('Api Requst Failure, using defaul values');
+        this.props.onMapUpdate(backup);
       }
-    })
-    .catch((error) => {
-      alert("Error in local search")
-      console.log(error);
     })
   }
 
