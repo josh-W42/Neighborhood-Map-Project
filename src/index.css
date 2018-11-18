@@ -153,6 +153,7 @@ code {
 
 #inputTable {
   text-align: center;
+  margin: auto;
 }
 
 #inputTable td {
@@ -193,6 +194,10 @@ code {
 .result:hover {
   background: lightblue;
   color: black;
+}
+
+.businessInfo {
+  text-transform: capitalize;
 }
 
 .businessImage {
@@ -244,6 +249,7 @@ code {
 
 .infoWindowCatagory {
   font-weight: bold;
+  text-transform: capitalize;
 }
 
 .deliveryLinkImg {
