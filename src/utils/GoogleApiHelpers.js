@@ -24,7 +24,7 @@ export function reverseGeoCode(google, location) {
         if (results[0]) {
           resolve(results);
         } else {
-          console.log("No results for location");
+          console.log("No Geocoding results for location");
         }
       } else {
         reject(status);
