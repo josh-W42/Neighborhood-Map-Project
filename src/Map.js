@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import {Map, Marker, InfoWindow} from 'google-maps-react';
 import SideUI from './SideUI.js';
 import backupResults from './utils/backupLocations.js';
-import { reverseGeoCode } from './utils/GoogleApiHelpers.js';
+import { reverseGeoCode, searchNearby } from './utils/GoogleApiHelpers.js';
 
 var foursquare = require('react-foursquare')({
   clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
@@ -102,14 +102,54 @@ class MapContainer extends Component {
           alert(results.response.warning.text);
         }
       } else {
-        /*
-          In the event that the foursquare api fails, some genrally popular
-          results will be listed. However, these results are only applicable to
-          the default location of the google map
-        */
-        this.setState({
-          places: backupResults.trending
-        });
+
+        const options = {
+          location: {
+            lat: map.center.lat(),
+            lng: map.center.lng()
+          },
+          radius: 1000,
+        }
+
+        searchNearby(this.props.google, map, options).then((results) => {
+          let formatedResults = []
+          results.forEach((result) => {
+            const place = {
+              venue: {
+                name: result.name,
+                id: result.id,
+                location: {
+                  formattedAddress: result.formatted_address,
+                  lat: result.geometry.location.lat(),
+                  lng: result.geometry.location.lng()
+                },
+                categories: [
+                  {
+                    name: result.types[0].replace(/_/gi, " ")
+                  }
+                ],
+                isFromGoogle: true,
+                icon: result.icon,
+                rating: result.rating,
+                opening_hours: result.opening_hours,
+                price_level: result.price_level,
+              }
+            }
+            formatedResults.push(place);
+          });
+          this.setState({ places: formatedResults })
+        }).catch((error) => {
+          /*
+            In the event that the foursquare and Google places api reqeusts fail,
+            some genrally popular results will be listed. However, these results are
+            only applicable to the default location of the google map.
+          */
+          console.log("Error in Google Place API Search")
+          this.setState({
+            places: backupResults.trending
+          });
+
+        })
       }
     });
   }
@@ -247,10 +287,29 @@ class MapContainer extends Component {
             })}
           >
           {
+            /*
+              Not all data (ratings, open status.. etc) are avalible for every
+              search result, thus infoWindows must be structured such that they
+              do not trigger errors.
+            */
             (this.state.places.includes(this.state.activePlace)) ? (
-
               <div className="infoWindow">
                 <h3 tabIndex="0">{this.state.activePlace.venue.name}</h3>
+                {
+                  (this.state.activePlace.venue.rating > 0) ? (
+                    <p>{`Average Rating: ${this.state.activePlace.venue.rating}/5`}</p>
+                  ):("")
+                }
+                {
+                  (this.state.activePlace.venue.opening_hours) ? (
+                    <p>
+                      {
+                        (this.state.activePlace.venue.opening_hours.open_now) ?
+                        ("Is Currently: Open"):("Is Currently Closed")
+                      }
+                    </p>
+                  ):("")
+                }
                 {
                   (this.state.activePlace.venue.delivery) ? (
                     <div className="deliveryOptions">
