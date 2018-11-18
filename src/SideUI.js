@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import backupResults from './utils/backupLocations.js';
+import { searchFor, searchNearby } from './utils/GoogleApiHelpers.js';
 
 var foursquare = require('react-foursquare')({
   clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
@@ -13,13 +14,15 @@ class SideUI extends Component {
     activeRadio: '',
     places: this.props.places,
 
-    filteredArrayReady: false
+    filteredArrayReady: false,
+
+    searchType: 'foursquare',
   }
 
 
   /*
    This function is called when a user uses the text input field in sideUI
-   uses foursquare explore call
+   uses foursquare explore call or google places Api search
   */
   onSearch(input) {
 
@@ -30,34 +33,88 @@ class SideUI extends Component {
     this.props.onFilterClose();
 
     const map = this.props.map;
+
+
+    if(this.state.searchType === "foursquare") {
+      const options = {
+        ll: `${map.center.lat()}, ${map.center.lng()}`,
+        query: input,
+        sortByDistance: 1,
+      }
+
+
+      foursquare.venues.explore(options)
+      .then((results) => {
+        if(results.meta.code === 200) {
+          if(results.response.totalResults > 0) {
+            this.props.onMapUpdate(results.response.groups[0].items);
+            this.props.map.panTo({
+              lat: results.response.groups[0].items[0].venue.location.lat,
+              lng: results.response.groups[0].items[0].venue.location.lng
+            });
+          } else {
+            alert(results.response.warning.text);
+          }
+        } else {
+          console.log('Api Requst Failure');
+          this.googlePlaceSearch(input, map);
+        }
+      }).catch((response, status) => {
+        console.log('Dual Api request Failure, using backupResults');
+        console.log(status);
+        console.log(response);
+        this.backupSearch(input);
+      });
+    } else if (this.state.searchType === "google") {
+      this.googlePlaceSearch(input, map);
+    }
+  }
+
+  googlePlaceSearch(input, map) {
     const options = {
-      ll: `${map.center.lat()}, ${map.center.lng()}`,
+      location: {
+        lat: map.center.lat(),
+        lng: map.center.lng()
+      },
       query: input,
-      sortByDistance: 1,
+      radius: 1000,
     }
 
-
-    foursquare.venues.explore(options)
-    .then((results) => {
-      if(results.meta.code === 200) {
-        if(results.response.totalResults > 0) {
-          this.props.onMapUpdate(results.response.groups[0].items);
-          this.props.map.panTo({
-            lat: results.response.groups[0].items[0].venue.location.lat,
-            lng: results.response.groups[0].items[0].venue.location.lng
-          });
-        } else {
-          alert(results.response.warning.text);
+    searchFor(this.props.google, map, options).then((results) => {
+      let formatedResults = []
+      results.forEach((result) => {
+        const place = {
+          venue: {
+            name: result.name,
+            id: result.id,
+            location: {
+              formattedAddress: result.formatted_address,
+              lat: result.geometry.location.lat(),
+              lng: result.geometry.location.lng()
+            },
+            categories: [
+              {
+                name: result.types[0].replace(/_/gi, " ")
+              }
+            ],
+            isFromGoogle: true,
+            icon: result.icon,
+            rating: result.rating,
+            opening_hours: result.opening_hours,
+            price_level: result.price_level,
+          }
         }
-      } else {
-        console.log('Api Requst Failure');
-        this.backupSearch(input);
-      }
-    }).catch((response, status) => {
-      alert("No Search Results");
-      console.log(status);
-      console.log(response);
-    });
+        formatedResults.push(place);
+      });
+      console.log(results)
+      this.props.onMapUpdate(formatedResults);
+      this.props.map.panTo({
+        lat: formatedResults[0].venue.location.lat,
+        lng: formatedResults[0].venue.location.lng
+      });
+    }).catch((error) => {
+      console.log("Error in Google Place API Search")
+    })
   }
 
   /*
@@ -96,9 +153,19 @@ class SideUI extends Component {
     });
     this.props.onFilterClose();
 
-    let options = {
+    // Request for Foursquare API
+    let optionsFS = {
       ll: `${this.props.map.center.lat()}, ${this.props.map.center.lng()}`,
       radius: '1000',
+    }
+
+    // Request for google place API, if needed
+    let optionsGP = {
+      location: {
+        lat: this.props.map.center.lat(),
+        lng: this.props.map.center.lng()
+      },
+      radius: 1000,
     }
 
     let backup;
@@ -106,29 +173,33 @@ class SideUI extends Component {
     switch (catagory) {
       case 'food':
         this.setState({ activeRadio: 'food' });
-        options.section = 'food';
+        optionsFS.section = 'food';
+        optionsGP.keyword = 'food';
         backup = backupResults.food;
         break;
       case 'arts':
         this.setState({ activeRadio: 'arts' });
-        options.section = 'arts';
+        optionsFS.section = 'arts'
+        optionsGP.keyword = 'arts';
         backup = backupResults.arts;
         break;
       case 'shopping':
         this.setState({ activeRadio: 'shops' });
-        options.section = 'shops';
+        optionsFS.section = 'shops'
+        optionsGP.keyword = 'shopping';
         backup = backupResults.shops;
         break;
       case 'popular':
         this.setState({ activeRadio: 'trending' });
-        options.section = 'trending';
+        optionsFS.section = 'trending';
+        optionsGP.type = 'point_of_interest';
         backup = backupResults.trending;
         break;
       default:
         alert("Error in Filter Search");
     }
 
-    foursquare.venues.explore(options)
+    foursquare.venues.explore(optionsFS)
     .then((results) => {
       if(results.meta.code === 200) {
         if(results.response.totalResults > 0) {
@@ -137,19 +208,49 @@ class SideUI extends Component {
           alert(results.response.warning.text);
         }
       } else {
-        console.log('Api Requst Failure, using defaul values');
-        this.props.onMapUpdate(backup);
-      }
-    })
-  }
+        console.log('Foursquare Api Request Failure, using Google Places Api values');
 
-// Function is called when a result is selected.
-  resultClick(place) {
-    this.props.map.panTo({
-      lat: place.venue.location.lat,
-      lng: place.venue.location.lng
+        let map = this.props.map;
+
+        /*
+          I format all the results from the google maps api to appear like results
+          from the foursquare api, but these results have more information
+          that you can take advantage of later (prive_level, opening_hours etc)
+        */
+        searchNearby(this.props.google, map, optionsGP).then((results) => {
+          let formatedResults = []
+          results.forEach((result) => {
+            const place = {
+              venue: {
+                name: result.name,
+                id: result.id,
+                location: {
+                  formattedAddress: result.formatted_address,
+                  lat: result.geometry.location.lat(),
+                  lng: result.geometry.location.lng()
+                },
+                categories: [
+                  {
+                    name: result.types[0].replace(/_/gi, " ")
+                  }
+                ],
+                isFromGoogle: true,
+                icon: result.icon,
+                rating: result.rating,
+                opening_hours: result.opening_hours,
+                price_level: result.price_level,
+              }
+            }
+            formatedResults.push(place);
+          });
+          this.props.onMapUpdate(formatedResults);
+        }).catch(() => {
+            console.log("Dual Api request failure, using backup results from default");
+            this.props.onMapUpdate(backup)
+        }
+      )
+      }
     });
-    this.props.onResultClick(place);
   }
 
   /*
@@ -159,6 +260,9 @@ class SideUI extends Component {
     is used to specify that the icon has a background.
   */
   getPlaceIcon(place) {
+    if(place.venue.isFromGoogle) {
+      return place.venue.icon
+    }
     if(place.venue.categories.length > 0) {
       const placeIcon = place.venue.categories[0].icon;
       const iconUrl = `${placeIcon.prefix}bg_64${placeIcon.suffix}`;
@@ -176,7 +280,9 @@ class SideUI extends Component {
       });
       this.props.onFilterClose();
     } else {
-      const filteredArray = this.props.places.filter( (place) => place.venue.categories[0].name.includes(filterOption));
+      const filteredArray = this.props.places.filter(
+        (place) => place.venue.categories[0].name.includes(filterOption) || place.venue.name.includes(filterOption)
+      );
       this.setState({
         filteredArrayReady: true,
         places: filteredArray
@@ -197,7 +303,13 @@ class SideUI extends Component {
     return (
       <div id="sideUI">
         <div className="mainUISection">
-          <h1 tabIndex="0">What would you like to search?</h1>
+          <h1 tabIndex="0">What would you like to search for?</h1>
+            <h2 tabIndex="0">Search Type:</h2>
+            <select role="combobox" aria-controls="" aria-expanded
+              onChange={(e) => this.setState({ searchType: e.target.value })}>
+              <option value="foursquare">Venue or Category</option>
+              <option value="google">Address or Location</option>
+            </select>
           <form>
             <input
               className="searchInput"
@@ -306,7 +418,11 @@ class SideUI extends Component {
                   }
                 }}
                 onClick={() => {
-                  this.resultClick(place);
+                  this.props.map.panTo({
+                    lat: place.venue.location.lat,
+                    lng: place.venue.location.lng
+                  });
+                  this.props.onResultClick(place);;
                 }}
               >
               <img
