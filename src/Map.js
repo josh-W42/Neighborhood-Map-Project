@@ -1,6 +1,8 @@
 import React, { Component } from 'react';
 import {Map, Marker, InfoWindow} from 'google-maps-react';
 import SideUI from './SideUI.js';
+import backupResults from './utils/backupLocations.js';
+import { reverseGeoCode } from './utils/GoogleApiHelpers.js';
 
 var foursquare = require('react-foursquare')({
   clientID: process.env.REACT_APP_FOURSQUARE_CLIENT_ID,
@@ -17,6 +19,9 @@ class MapContainer extends Component {
     activeMarker: {},
     activePlace: {},
 
+    currentAddress: "",
+    currentLocation: {},
+
   }
 
   // This function will asign a marker as 'active', so that its' data can
@@ -27,9 +32,9 @@ class MapContainer extends Component {
       infoWindowOpen: true,
       activeMarker: marker,
 
-      filteredArray: [],
-
-      filteredArrayReady: false
+      // filteredArray: [],
+      //
+      // filteredArrayReady: false
     });
   }
 
@@ -44,6 +49,30 @@ class MapContainer extends Component {
     })
     .then(() => {
       this.nearbySearch(map);
+
+
+
+      const placeProps = {
+        placeData: {
+          name: "Current Location"
+        }
+      }
+
+      let marker = new this.props.google.maps.Marker({
+        position: {
+          lat: this.state.map.center.lat(),
+          lng: this.state.map.center.lng()
+        },
+        icon: {
+          path: this.props.google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+          scale: 5
+        },
+        map: map,
+        animation: this.props.google.maps.Animation.DROP,
+      });
+      marker.addListener('click', (e) => {
+        this.onMarkerClick(placeProps, marker, e)}
+      );
     })
     .catch((message) => {
       this.nearbySearch(map);
@@ -51,6 +80,7 @@ class MapContainer extends Component {
     })
   }
 
+  // This is an intial search for Places in the local area when map is ready.
   nearbySearch(map) {
     this.setState({
       map: map
@@ -68,9 +98,20 @@ class MapContainer extends Component {
           this.setState({
             places: results.response.groups[0].items
           })
+        } else {
+          alert(results.response.warning.text);
         }
+      } else {
+        /*
+          In the event that the foursquare api fails, some genrally popular
+          results will be listed. However, these results are only applicable to
+          the default location of the google map
+        */
+        this.setState({
+          places: backupResults.trending
+        });
       }
-    })
+    });
   }
 
  /*
@@ -90,6 +131,9 @@ class MapContainer extends Component {
     function error(error) {
       alert('Geolocation Serivce Failed, using default location');
       console.warn(`ERROR(${error.code}): ${error.message}`);
+      if(error.code === 504) {
+        console.log('Please refresh for current location data');
+      }
       callback();
     }
 
@@ -101,6 +145,18 @@ class MapContainer extends Component {
           lng: cord.longitude
         };
         map.setCenter(location);
+
+        reverseGeoCode(this.props.google, {
+          lat: cord.latitude,
+          lng: cord.longitude
+        }).then((result) => {
+          location.Address = result[0].formatted_address;
+        }).catch((error) => {
+          console.log(error);
+        });
+
+
+        this.setState({ currentLocation: location });
         callback();
       }, error, options);
     } else {
@@ -132,12 +188,13 @@ class MapContainer extends Component {
           google={this.props.google}
           places={this.state.places}
           map={this.state.map}
+          currentLocation={this.state.currentLocation}
           onFilterClose={ () => this.setState({ filteredArrayReady: false }) }
           onFilterUpdate={ (filterdPlaces) => this.setState({
             filteredArray: filterdPlaces,
             filteredArrayReady: true
           })}
-          onMapUpdate={ (places) => this.setState({places: places.response.groups[0].items }) }
+          onMapUpdate={ (places) => this.setState({ places }) }
           onResultClick={ (place) => {
             this.setState({
               activePlace: place.venue,
@@ -229,8 +286,16 @@ class MapContainer extends Component {
                   {this.state.activePlace.venue.location.formattedAddress}
                 </p>
               </div>
-            ):(<div></div>)
-          }
+            ):(
+              <div className="infoWindow">
+                <h3 tabIndex="0">{this.state.activePlace.name}</h3>
+                {
+                  (this.state.currentLocation.Address) ? (
+                    <p tabIndex="0" className="infoWindowAddress">{`Approximately: ${this.state.currentLocation.Address}`}</p>
+                  ):("")
+                }
+              </div>
+            )}
           </InfoWindow>
         </Map>
       </div>
