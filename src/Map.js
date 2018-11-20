@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Map, Marker, InfoWindow} from 'google-maps-react';
+import {Map, InfoWindow} from 'google-maps-react';
 import SideUI from './SideUI.js';
 import backupResults from './utils/backupLocations.js';
 import { reverseGeoCode, searchNearby } from './utils/GoogleApiHelpers.js';
@@ -22,6 +22,8 @@ class MapContainer extends Component {
     currentAddress: "",
     currentLocation: {},
 
+    markers: [],
+
   }
 
   // This function will asign a marker as 'active', so that its' data can
@@ -29,12 +31,8 @@ class MapContainer extends Component {
   onMarkerClick = (props, marker, e) => {
     this.setState({
       activePlace: props.placeData,
-      infoWindowOpen: true,
       activeMarker: marker,
-
-      // filteredArray: [],
-      //
-      // filteredArrayReady: false
+      infoWindowOpen: true,
     });
   }
 
@@ -49,8 +47,6 @@ class MapContainer extends Component {
     })
     .then(() => {
       this.nearbySearch(map);
-
-
 
       const placeProps = {
         placeData: {
@@ -73,6 +69,7 @@ class MapContainer extends Component {
       marker.addListener('click', (e) => {
         this.onMarkerClick(placeProps, marker, e)}
       );
+      this.createMarkers();
     })
     .catch((message) => {
       this.nearbySearch(map);
@@ -148,9 +145,9 @@ class MapContainer extends Component {
           this.setState({
             places: backupResults.trending
           });
-
-        })
+        });
       }
+      this.createMarkers();
     });
   }
 
@@ -212,15 +209,53 @@ class MapContainer extends Component {
     return(iconUrl);
   }
 
+  createMarkers() {
 
-  render() {
+    if(this.state.markers.length > 0) {
+      this.state.markers.forEach((marker) => {
+        marker.setMap(null);
+      })
+    }
 
-    let placeArray;
+    let placeArray = [];
     if(this.state.filteredArrayReady) {
       placeArray = this.state.filteredArray;
     } else {
       placeArray = this.state.places;
     }
+
+
+    let markers = [];
+
+
+
+    placeArray.forEach((place) => {
+      const placeProps = {
+        placeData: place
+      }
+
+      let marker = new this.props.google.maps.Marker({
+        position: {
+          lat: place.venue.location.lat,
+          lng: place.venue.location.lng
+        },
+        placeData: place,
+        map: this.state.map,
+      });
+
+      marker.addListener('click', (e) => {
+        this.onMarkerClick(placeProps, marker, e);
+      });
+
+
+      markers.push(marker);
+    });
+
+    this.setState({ markers });
+  }
+
+
+  render() {
 
     return (
       <div>
@@ -230,16 +265,27 @@ class MapContainer extends Component {
           map={this.state.map}
           currentLocation={this.state.currentLocation}
           onFilterClose={ () => this.setState({ filteredArrayReady: false }) }
-          onFilterUpdate={ (filterdPlaces) => this.setState({
-            filteredArray: filterdPlaces,
-            filteredArrayReady: true
-          })}
-          onMapUpdate={ (places) => this.setState({ places }) }
-          onResultClick={ (place) => {
+          onFilterUpdate={ (filterdPlaces) => {
             this.setState({
-              activePlace: place.venue,
-              infoWindowOpen: false
-             });
+              filteredArray: filterdPlaces,
+              filteredArrayReady: true
+            });
+            this.createMarkers();
+          }}
+          onMapUpdate={ (places) => {
+            this.setState({ places });
+            this.createMarkers();
+          }}
+          onResultClick={ (place) => {
+            this.state.markers.forEach((marker) => {
+              if(marker.getAnimation() === 1) {
+                marker.setAnimation(null);
+              }
+              if(marker.placeData === place){
+                marker.setAnimation(this.props.google.maps.Animation.BOUNCE);
+                this.onMarkerClick(marker, marker);
+              }
+            });
           }}
           />
         <Map
@@ -252,39 +298,19 @@ class MapContainer extends Component {
           google={this.props.google}
           zoom={16}
           >
-          {
-            placeArray.map( (place) =>
-              {
-                return (
-                  <Marker
-                    tabIndex="0"
-                    key={place.venue.id}
-                    placeData={place}
-                    onClick={this.onMarkerClick}
-                    position={{
-                      lat: place.venue.location.lat,
-                      lng: place.venue.location.lng
-                    }}
-                    animation={
-                      (this.state.activePlace === place.venue) ? (
-                          this.props.google.maps.Animation.BOUNCE
-                        ):("")
-                    }
-                    name={place.venue.name}
-                    />
-                )
-              }
-             )
-          }
           <InfoWindow
             role="dialog"
             marker={this.state.activeMarker}
             visible={this.state.infoWindowOpen}
-            onClose={ () => this.setState({
-              infoWindowOpen: false,
-              activePlace: {},
-              activeMarker: {},
-            })}
+            onClose={ () => {
+              this.state.activeMarker.setAnimation(null);
+              this.setState({
+                infoWindowOpen: false,
+                activePlace: {},
+                activeMarker: {},
+              });
+            }
+          }
           >
           {
             /*
@@ -361,5 +387,33 @@ class MapContainer extends Component {
     );
   }
 }
+
+/*
+{
+  this.state.places.map( (place) =>
+    {
+      return (
+        <Marker
+          tabIndex="0"
+          key={place.venue.id}
+          onClick={this.onMarkerClick}
+          position={{
+            lat: place.venue.location.lat,
+            lng: place.venue.location.lng
+          }}
+          placeData={place}
+          animation={
+            (this.state.activePlace === place.venue) ? (
+                this.props.google.maps.Animation.BOUNCE
+              ):("")
+          }
+          name={place.venue.name}
+          />
+      )
+    }
+   )
+}
+
+*/
 
 export default MapContainer
