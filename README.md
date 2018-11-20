@@ -9,6 +9,8 @@ To get started developing right away:
 
 * install some project dependencies with `npm install`, refer to the following project dependencies for additional steps.
 * start the development server with `npm start`
+* To run the app in production mode use command `npm run build`. This will build the app for production in the build folder. It correctly bundles React in production mode and optimizes the build for the best performance.
+* To view in production use command `serve -s build` for serving in static server.
 
 
 ## Create React App
