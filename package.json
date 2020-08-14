@@ -4,7 +4,8 @@
   "private": true,
   "homepage": "https://josh-W42.github.io/Neighborhood-Map-Project/",
   "dependencies": {
-    "google-maps-react": "^2.0.2",
+    "dotenv": "^8.2.0",
+    "google-maps-react": "^2.0.6",
     "react": "^16.6.0",
     "react-dom": "^16.6.0",
     "react-foursquare": "^1.0.3",
